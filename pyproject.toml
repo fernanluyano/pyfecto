@@ -1,0 +1,17 @@
+[project]
+name = "pyffect"
+version = "0.1.0-dev20250217"
+description = "A simple yet powerful library for handling effects and errors in Python"
+authors = [
+    {name = "fernanluyano"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
