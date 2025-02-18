@@ -1,5 +1,5 @@
 [project]
-name = "pyffect"
+name = "pyfecto"
 version = "0.1.0-dev20250217"
 description = "A simple yet powerful library for handling effects and errors in Python"
 authors = [
