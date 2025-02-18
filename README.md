@@ -17,13 +17,13 @@ While ZIO offers a more comprehensive suite of features for concurrent and paral
 ## Installation
 
 ```bash
-pip install pyffect
+pip install pyfecto
 ```
 
 ## Quick Start
 
 ```python
-from pyffect import PYIO
+from pyfecto import PYIO
 
 # Create a simple effect
 def divide(a: int, b: int) -> PYIO[Exception, float]:
