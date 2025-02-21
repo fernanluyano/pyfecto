@@ -23,7 +23,16 @@ build-backend = "poetry_dynamic_versioning.backend"
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
-style = "semver"
+style = "pep440"
+format-jinja = """
+{%- if branch == "main" or branch == "master" or branch == "develop" -%}
+0.0.0
+{%- elif branch.startswith("release/") -%}
+{{ branch.split("/")[1] }}
+{%- else -%}
+0.0.0.dev{{ branch.split("/")[1].split("-")[0] }}
+{%- endif -%}
+"""
 
 [tool.poetry.requires-plugins]
 poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
