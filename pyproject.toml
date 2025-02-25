@@ -5,20 +5,32 @@ authors = ["fernanluyano"]
 license = "MIT"
 readme = "README.md"
 packages = [
+    { include = "pyfecto", from = "src" }
 ]
-version = "0.0.0"
+version = "0.0.0" # dynamically overwritten
 
 [tool.poetry.dependencies]
-python = ">=3.11"
+python = "^3.11"
 gitpython = "^3.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^6.0.0"
+black = "^25.1.0"
+isort = "^6.0.0"
+flake8 = "^7.1.2"
+mypy = "^1.15.0"
 
 [build-system]
 requires = [
     "poetry-core>=2.0.0,<3.0.0",
     "poetry-dynamic-versioning>=1.0.0,<2.0.0"
 ]
-# See https://github.com/mtkennerly/poetry-dynamic-versioning
 build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
 
 [tool.poetry-dynamic-versioning]
 enable = true
@@ -30,7 +42,7 @@ format-jinja = """
 {%- elif branch.startswith("release/") -%}
 {{ branch.split("/")[1] }}
 {%- else -%}
-0.0.0.dev{{ branch.split("/")[1].split("-")[0] }}
+0.0.0.dev{{ branch.split("/")[1].split("-")[1] }}
 {%- endif -%}
 """
 

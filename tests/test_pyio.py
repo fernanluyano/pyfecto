@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 from unittest import TestCase
 
 from src.pyfecto.pyio import PYIO
@@ -10,13 +9,17 @@ class User:
     id: int
     name: str
 
+
 class DatabaseError(Exception):
     pass
+
 
 class TestPYIO(TestCase):
 
     def test_dummy(self):
-        def get_user(user_id: int) -> PYIO[DatabaseError, Optional[User]]:
+        def get_user(
+            user_id: int,
+        ) -> PYIO[None, User] | PYIO[None, None] | PYIO[Exception, None]:
             try:
                 # Simulate DB lookup
                 if user_id == 1:
@@ -25,7 +28,9 @@ class TestPYIO(TestCase):
             except Exception as e:
                 return PYIO.fail(DatabaseError(str(e)))
 
-        def update_user(user: User, new_name: str) -> PYIO[DatabaseError, User]:
+        def update_user(
+            user: User, new_name: str
+        ) -> PYIO[None, User] | PYIO[Exception, None]:
             try:
                 # Simulate DB update
                 return PYIO.success(User(user.id, new_name))
@@ -33,19 +38,18 @@ class TestPYIO(TestCase):
                 return PYIO.fail(DatabaseError(str(e)))
 
         # Usage
-        def rename_user(user_id: int, new_name: str) -> PYIO[DatabaseError, Optional[User]]:
-            return (
-                get_user(user_id)
-                .flat_map(lambda maybe_user:
-                          PYIO.success(None) if maybe_user is None
-                          else update_user(maybe_user, new_name)
-                          )
+        def rename_user(user_id: int, new_name: str):
+            return get_user(user_id).flat_map(
+                lambda maybe_user: (
+                    PYIO.success(None)
+                    if maybe_user is None
+                    else update_user(maybe_user, new_name)
+                )
             )
 
         # Run it
         result = rename_user(2, "Alicia").run()
         print(result)
-
 
     def test_success(self):
         effect = PYIO.success(42)
@@ -168,16 +172,14 @@ class TestPYIO(TestCase):
 
     def test_fold_success(self):
         effect = PYIO.success(42).match(
-            failure=lambda e: f"Error: {e}",
-            success=lambda x: f"Value: {x}"
+            failure=lambda e: f"Error: {e}", success=lambda x: f"Value: {x}"
         )
         self.assertEqual(effect.run(), "Value: 42")
 
     def test_match_failure(self):
         error = ValueError("test error")
         effect = PYIO.fail(error).match(
-            failure=lambda e: f"Error: {e}",
-            success=lambda x: f"Value: {x}"
+            failure=lambda e: f"Error: {e}", success=lambda x: f"Value: {x}"
         )
         self.assertEqual(effect.run(), "Error: test error")
 
@@ -185,7 +187,7 @@ class TestPYIO(TestCase):
         # Test success path
         success_effect = PYIO.success(42).match_pyio(
             success=lambda x: PYIO.success(f"Success: {x}"),
-            failure=lambda e: PYIO.success(f"Error: {e}")
+            failure=lambda e: PYIO.success(f"Error: {e}"),
         )
         self.assertEqual(success_effect.run(), "Success: 42")
 
@@ -193,7 +195,7 @@ class TestPYIO(TestCase):
         error = ValueError("test error")
         failure_effect = PYIO.fail(error).match_pyio(
             success=lambda x: PYIO.success(f"Success: {x}"),
-            failure=lambda e: PYIO.fail(e)
+            failure=lambda e: PYIO.fail(e),
         )
         self.assertEqual(failure_effect.run(), error)
 
@@ -222,13 +224,21 @@ class TestPYIO(TestCase):
 
     def test_long_successful_flow(self):
         def validate_user(name: str):
-            return PYIO.success(name) if len(name) >= 3 else PYIO.fail(ValueError("Name too short"))
+            return (
+                PYIO.success(name)
+                if len(name) >= 3
+                else PYIO.fail(ValueError("Name too short"))
+            )
 
         def create_email(name: str):
             return PYIO.success(f"{name.lower()}@example.com")
 
         def check_permissions(email: str):
-            return PYIO.success(True) if "example.com" in email else PYIO.fail(ValueError("Invalid domain"))
+            return (
+                PYIO.success(True)
+                if "example.com" in email
+                else PYIO.fail(ValueError("Invalid domain"))
+            )
 
         def generate_token(has_permission: bool):
             return PYIO.success("secret-token-123")
@@ -236,17 +246,16 @@ class TestPYIO(TestCase):
         def record_audit_log(token: str):
             return PYIO.success(f"Audit: token {token} created")
 
-        flow = (PYIO.success("Alice")
-                .flat_map(validate_user)
-                .flat_map(create_email)
-                .flat_map(check_permissions)
-                .flat_map(generate_token)
-                .flat_map(record_audit_log))
-
-        self.assertEqual(
-            flow.run(),
-            "Audit: token secret-token-123 created"
+        flow = (
+            PYIO.success("Alice")
+            .flat_map(validate_user)
+            .flat_map(create_email)
+            .flat_map(check_permissions)
+            .flat_map(generate_token)
+            .flat_map(record_audit_log)
         )
+
+        self.assertEqual(flow.run(), "Audit: token secret-token-123 created")
 
     def test_long_flow_with_failure(self):
         def step1(x: int):
@@ -258,37 +267,22 @@ class TestPYIO(TestCase):
         def step3(x: int):
             return PYIO.success(f"Final value: {x}")
 
-        flow = (PYIO.success(0)
-                .flat_map(step1)
-                .flat_map(step2)
-                .flat_map(step3)
-                )
+        flow = PYIO.success(0).flat_map(step1).flat_map(step2).flat_map(step3)
 
-        self.assertEqual(
-            flow.is_failure().run(),
-            True
-        )
+        self.assertEqual(flow.is_failure().run(), True)
 
     def test_for(self):
         # a single effect
-        result = PYIO.chain_all(
-            PYIO.success(1)
-        ).run()
+        result = PYIO.chain_all(PYIO.success(1)).run()
         self.assertEqual(result, 1)
 
-        result = PYIO.chain_all(
-            PYIO.success(1),
-            PYIO.success(2),
-            PYIO.success(3)
-        ).run()
+        result = PYIO.chain_all(PYIO.success(1), PYIO.success(2), PYIO.success(3)).run()
         self.assertEqual(result, 3)
 
         # stop at the first error
         error = ValueError("test error")
         result = PYIO.chain_all(
-            PYIO.success(1),
-            PYIO.fail(error),
-            PYIO.success(3)
+            PYIO.success(1), PYIO.fail(error), PYIO.success(3)
         ).run()
         self.assertEqual(result, error)
 
@@ -307,22 +301,15 @@ class TestPYIO(TestCase):
             return PYIO.success(f"Result: {x}")
 
         # Test successful chain
-        result = PYIO.pipeline(
-            first,
-            double,
-            to_string
-        ).run()
+        result = PYIO.pipeline(first, double, to_string).run()
         self.assertEqual(result, "Result: 2")
 
         # Test with error
-        def fail(x: int) -> PYIO[Exception, int]:
+        def fail(x: int) -> PYIO[Exception, None]:
             return PYIO.fail(ValueError(f"Error at {x}"))
 
         result = PYIO.pipeline(
-            first,
-            double,
-            fail,
-            to_string  # Should not reach this
+            first, double, fail, to_string  # Should not reach this
         ).run()
         self.assertIsInstance(result, ValueError)
         self.assertEqual(str(result), "Error at 2")
@@ -345,10 +332,6 @@ class TestPYIO(TestCase):
         def get_data(perms: dict):
             return PYIO.success(f"Data for user {perms['user_id']}")
 
-        result = PYIO.pipeline(
-            get_user,
-            get_permissions,
-            get_data
-        ).run()
+        result = PYIO.pipeline(get_user, get_permissions, get_data).run()
 
         self.assertEqual(result, "Data for user 1")
