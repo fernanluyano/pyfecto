@@ -1,26 +1,35 @@
 # Makefile for Pyfecto project
 # Helps with building, testing, and publishing
 
-.PHONY: clean install test lint format build publish help
+.PHONY: clean install test lint format build publish tag-release help
 
 # Virtual environment directory
 VENV = .venv
-# Python interpreter
-PYTHON = python3
-# Poetry executable
-POETRY = poetry
+POETRY_VERSION := $(shell poetry version -s)
+EPOCH := $(shell date +%s)
+
+# Set an epoch version for the main branch
+CURRENT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+ifeq ($(CURRENT_BRANCH), main)
+    VERSION := 0.0.$(EPOCH)
+else
+    VERSION := $(POETRY_VERSION)
+endif
+
+TAG := v$(VERSION)
 
 help:
 	@echo "Pyfecto Project Makefile"
 	@echo "------------------------"
-	@echo "clean      - Remove build artifacts and cached files"
-	@echo "install    - Install dependencies and the package in development mode"
-	@echo "test       - Run tests"
-	@echo "lint       - Run linting checks"
-	@echo "format     - Format code using black, isort"
-	@echo "build      - Build the package distribution"
-	@echo "publish    - Publish the package to PyPI"
-	@echo "version    - Display the current package version"
+	@echo "clean      	- Remove build artifacts and cached files"
+	@echo "install    	- Install dependencies and the package in development mode"
+	@echo "test       	- Run tests"
+	@echo "lint       	- Run linting checks"
+	@echo "format     	- Format code using black, isort"
+	@echo "build      	- Build the package distribution"
+	@echo "publish    	- Publish the package to PyPI"
+	@echo "version    	- Display the current package version"
+	@echo "tag-release	- Bump version and create git tag."
 
 clean:
 	@echo "Cleaning up..."
@@ -39,46 +48,51 @@ clean:
 
 install:
 	@echo "Installing dependencies and package in dev mode..."
-	@$(POETRY) install
+	@poetry install
 	@echo "Installation complete!"
 
 test:
 	@echo "Running tests..."
-	@$(POETRY) run pytest -v tests/
+	@poetry run pytest -v tests/
 	@echo "Tests complete!"
 
 test-cov:
 	@echo "Running tests with coverage..."
-	@$(POETRY) run pytest --cov=src/pyfecto tests/
+	@poetry run pytest --cov=src/pyfecto tests/
 	@echo "Coverage tests complete!"
 
 lint:
 	@echo "Running linters..."
-	@$(POETRY) run flake8 src/pyfecto tests
-	@$(POETRY) run mypy src/pyfecto
+	@poetry run flake8 src/pyfecto tests
+	@poetry run mypy src/pyfecto
 	@echo "Linting complete!"
 
 format:
 	@echo "Formatting code..."
-	@$(POETRY) run black src/pyfecto tests
-	@$(POETRY) run isort src/pyfecto tests
+	@poetry run black src/pyfecto tests
+	@poetry run isort src/pyfecto tests
 	@echo "Formatting complete!"
 
 build:
 	@echo "Building package..."
-	@$(POETRY) build
+	@poetry build
 	@echo "Build complete!"
 
 publish:
 	@echo "Publishing to PyPI..."
-	@$(POETRY) publish
+	@poetry publish
 	@echo "Publish complete!"
 
 publish-test:
 	@echo "Publishing to Test PyPI..."
-	@$(POETRY) publish -r testpypi
+	@poetry publish -r testpypi
 	@echo "Test publish complete!"
 
 version:
 	@echo "Current package version:"
-	@$(POETRY) version -s
+	@echo "${VERSION}"
+
+tag-release:
+	@echo "Tagging release..."
+	@git tag -a ${TAG} -m "release tag" && git push origin ${TAG}
+	@echo "✅ Release ${TAG} completed!"

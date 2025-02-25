@@ -37,8 +37,8 @@ enable = true
 vcs = "git"
 style = "pep440"
 format-jinja = """
-{%- if branch == "main" or branch == "master" or branch == "develop" -%}
-0.0.0
+{%- if branch == "main" -%}
+{{ env.get("VERSION", "0.0.0") }}
 {%- elif branch.startswith("release/") -%}
 {{ branch.split("/")[1] }}
 {%- else -%}
