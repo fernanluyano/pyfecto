@@ -17,7 +17,7 @@ While ZIO offers a more comprehensive suite of features for concurrent and paral
 ## Installation
 
 ```bash
-pip install TODO
+pip install pyfecto
 ```
 
 ## Quick Start
