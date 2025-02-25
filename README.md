@@ -23,20 +23,22 @@ pip install pyfecto
 ## Quick Start
 
 ```python
-from pyfecto import PYIO
+from pyfecto.pyio import PYIO
 
 # Create a simple effect
-def divide(a: int, b: int) -> PYIO[Exception, float]:
+def divide(a: int, b: int):
     if b == 0:
         return PYIO.fail(ValueError("Division by zero"))
     return PYIO.success(a / b)
 
+
 # Chain multiple effects
-def compute_average(numbers: list[int]) -> PYIO[Exception, float]:
+def compute_average(numbers: list[int]):
     return (
         PYIO.success(sum(numbers))
         .flat_map(lambda total: divide(total, len(numbers)))
     )
+
 
 # Run the computation
 result = compute_average([1, 2, 3, 4]).run()
@@ -61,6 +63,8 @@ Pyfecto is built around a few key concepts:
 ### Creating Effects
 
 ```python
+from pyfecto.pyio import PYIO
+
 # Success case
 success_effect = PYIO.success(42)
 
@@ -77,6 +81,8 @@ safe_effect = PYIO.attempt(might_throw)
 ### Transforming Effects
 
 ```python
+from pyfecto.pyio import PYIO
+
 # Map success values
 effect = PYIO.success(42).map(lambda x: x * 2)
 
@@ -96,6 +102,8 @@ effect = (
 ### Combining Effects
 
 ```python
+from pyfecto.pyio import PYIO
+
 # Sequence independent effects
 combined = PYIO.chain_all(
     effect1,
@@ -121,7 +129,7 @@ Here's a more complex example showing how to handle database operations:
 ```python
 from dataclasses import dataclass
 from typing import Optional
-from pyfecto import PYIO
+from pyfecto.pyio import PYIO
 
 @dataclass
 class User:
@@ -131,7 +139,7 @@ class User:
 class DatabaseError(Exception):
     pass
 
-def get_user(user_id: int) -> PYIO[DatabaseError, Optional[User]]:
+def get_user(user_id: int):
     try:
         # Simulate DB lookup
         if user_id == 1:
@@ -140,7 +148,7 @@ def get_user(user_id: int) -> PYIO[DatabaseError, Optional[User]]:
     except Exception as e:
         return PYIO.fail(DatabaseError(str(e)))
 
-def update_user(user: User, new_name: str) -> PYIO[DatabaseError, User]:
+def update_user(user: User, new_name: str):
     try:
         # Simulate DB update
         return PYIO.success(User(user.id, new_name))
@@ -148,7 +156,7 @@ def update_user(user: User, new_name: str) -> PYIO[DatabaseError, User]:
         return PYIO.fail(DatabaseError(str(e)))
 
 # Usage
-def rename_user(user_id: int, new_name: str) -> PYIO[DatabaseError, Optional[User]]:
+def rename_user(user_id: int, new_name: str):
     return (
         get_user(user_id)
         .flat_map(lambda maybe_user: 
@@ -167,6 +175,8 @@ Pyfecto provides several ways to handle errors:
 
 1. **Recovery with default**:
 ```python
+from pyfecto.pyio import PYIO
+
 effect.recover(lambda err: PYIO.success(default_value))
 ```
 
