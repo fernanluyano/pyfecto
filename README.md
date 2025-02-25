@@ -1,10 +1,10 @@
-# Pyffect - Pure IO Effects for Python
+# Pyfecto - Pure IO Effects for Python
 
-Pyffect is a simple yet powerful library for handling effects and errors in Python, inspired by Scala's [ZIO](https://zio.dev/) library.
+Pyfecto is a simple yet powerful library for handling effects and errors in Python, inspired by Scala's [ZIO](https://zio.dev/) library.
 It provides a composable way to handle computations that might fail, ensuring type safety and maintainability.
 
-Like ZIO, Pyffect models effectful computations as values, enabling powerful composition and error handling patterns while maintaining referential transparency.
-While ZIO offers a more comprehensive suite of features for concurrent and parallel programming in Scala, Pyffect brings its core concepts of effect management to Python.
+Like ZIO, Pyfecto models effectful computations as values, enabling powerful composition and error handling patterns while maintaining referential transparency.
+While ZIO offers a more comprehensive suite of features for concurrent and parallel programming in Scala, Pyfecto brings its core concepts of effect management to Python.
 
 ## Features
 
@@ -48,7 +48,7 @@ result = compute_average([]).run()
 
 ## Core Concepts
 
-Pyffect is built around a few key concepts:
+Pyfecto is built around a few key concepts:
 
 1. **Effects**: An effect represents a computation that might fail. It carries both the potential error type `E` and success type `A`.
 
@@ -121,7 +121,7 @@ Here's a more complex example showing how to handle database operations:
 ```python
 from dataclasses import dataclass
 from typing import Optional
-from pyffect import PYIO
+from pyfecto import PYIO
 
 @dataclass
 class User:
@@ -163,7 +163,7 @@ result = rename_user(1, "Alicia").run()
 
 ## Error Handling Patterns
 
-Pyffect provides several ways to handle errors:
+Pyfecto provides several ways to handle errors:
 
 1. **Recovery with default**:
 ```python
