@@ -1,5 +1,8 @@
+import time
 from dataclasses import dataclass
 from typing import Callable, Generic, Optional, TypeVar
+
+from .runtime import LOGGER
 
 A = TypeVar("A")
 B = TypeVar("B")
@@ -259,3 +262,98 @@ class PYIO(Generic[E, A]):
             return error
 
         return value
+
+    @staticmethod
+    def log_trace(message: str, **kwargs) -> "PYIO[None, None]":
+        """
+        Log a trace message as an effect.
+
+        Args:
+            message: The message to log
+            **kwargs: Additional context to include in the log
+        """
+        return PYIO.attempt(lambda: LOGGER.trace(message, **kwargs))
+
+    @staticmethod
+    def log_debug(message: str, **kwargs) -> "PYIO[None, None]":
+        """
+        Log a debug message as an effect.
+
+        Args:
+            message: The message to log
+            **kwargs: Additional context to include in the log
+        """
+        return PYIO.attempt(lambda: LOGGER.debug(message, **kwargs))
+
+    @staticmethod
+    def log_info(message: str, **kwargs) -> "PYIO[None, None]":
+        """
+        Log an info message as an effect.
+
+        Args:
+            message: The message to log
+            **kwargs: Additional context to include in the log
+        """
+        return PYIO.attempt(lambda: LOGGER.info(message, **kwargs))
+
+    @staticmethod
+    def log_warning(message: str, **kwargs) -> "PYIO[None, None]":
+        """
+        Log a warning message as an effect.
+
+        Args:
+            message: The message to log
+            **kwargs: Additional context to include in the log
+        """
+        return PYIO.attempt(lambda: LOGGER.warning(message, **kwargs))
+
+    @staticmethod
+    def log_error(message: str, **kwargs) -> "PYIO[None, None]":
+        """
+        Log an error message as an effect.
+
+        Args:
+            message: The message to log
+            **kwargs: Additional context to include in the log
+        """
+        return PYIO.attempt(lambda: LOGGER.error(message, **kwargs))
+
+    @staticmethod
+    def log_critical(message: str, **kwargs) -> "PYIO[None, None]":
+        """
+        Log a critical message as an effect.
+
+        Args:
+            message: The message to log
+            **kwargs: Additional context to include in the log
+        """
+        return PYIO.attempt(lambda: LOGGER.critical(message, **kwargs))
+
+    @staticmethod
+    def log_span(name: str, log_msg: str, operation: "PYIO[E, A]") -> "PYIO[E, A]":
+        """
+        Creates a composed effect that logs timing information after the operation completes.
+
+        This implementation uses logger.bind() to create a contextual logger with span information.
+        Spans will appear in the log output where {extra} is specified in the format string.
+
+        Args:
+            name: A descriptive name for the span
+            log_msg: The message to log
+            operation: The effect to wrap with logging
+
+        Returns:
+            A composed effect that includes timing and logging after the original operation
+        """
+
+        def execute_with_timing() -> tuple[E, A | None]:
+            start_time = time.time_ns()
+            error, value = operation._compute()
+            # Calculate elapsed time in milliseconds
+            elapsed_ms = (time.time_ns() - start_time) / 1_000_000
+            span_logger = LOGGER.bind(spans={name: f"{elapsed_ms:.2f}ms"})
+            span_logger.info(log_msg)
+
+            return error, value
+
+        return PYIO(execute_with_timing)
