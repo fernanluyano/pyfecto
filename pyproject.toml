@@ -25,7 +25,7 @@ mypy = "^1.15.0"
 [build-system]
 requires = [
     "poetry-core>=2.0.0,<3.0.0",
-    "poetry-dynamic-versioning>=1.0.0,<2.0.0"
+    "poetry-dynamic-versioning>=1.0.0,<2.0.0",
 ]
 build-backend = "poetry_dynamic_versioning.backend"
 
@@ -46,6 +46,3 @@ format-jinja = """
 0.0.0.dev{{ branch.split("/")[1].split("-")[0] }}
 {%- endif -%}
 """
-
-[tool.poetry.requires-plugins]
-poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
