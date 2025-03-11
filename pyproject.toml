@@ -12,6 +12,7 @@ version = "0.0.0" # dynamically overwritten
 [tool.poetry.dependencies]
 python = "^3.11"
 gitpython = "^3.1.0"
+loguru = "^0.7.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
@@ -24,7 +25,7 @@ mypy = "^1.15.0"
 [build-system]
 requires = [
     "poetry-core>=2.0.0,<3.0.0",
-    "poetry-dynamic-versioning>=1.0.0,<2.0.0"
+    "poetry-dynamic-versioning>=1.0.0,<2.0.0",
 ]
 build-backend = "poetry_dynamic_versioning.backend"
 
@@ -42,9 +43,6 @@ format-jinja = """
 {%- elif branch.startswith("release/") -%}
 {{ branch.split("/")[1] }}
 {%- else -%}
-0.0.0.dev{{ branch.split("/")[1].split("-")[1] }}
+0.0.0.dev{{ branch.split("/")[1].split("-")[0] }}
 {%- endif -%}
 """
-
-[tool.poetry.requires-plugins]
-poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }

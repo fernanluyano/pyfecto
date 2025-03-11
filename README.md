@@ -122,6 +122,70 @@ pipeline = PYIO.pipeline(
 zipped = effect1.zip(effect2)  # Gets tuple of results
 ```
 
+## Runtime Configuration
+
+Pyfecto includes a runtime configuration system that allows you to customize logging and span tracking using [Loguru](https://github.com/Delgan/loguru) as the backend:
+
+
+```python
+from pyfecto.runtime import Runtime
+import sys
+
+# Define a custom sink function for logs
+def alert_sink(message):
+    if "error" in message.lower():
+        print(f"🚨 ALERT: {message}")
+
+# Configure the runtime
+runtime = Runtime(
+    log_level="DEBUG",  # Set minimum log level
+    log_format="{time:YYYY-MM-DD HH:mm:ss} | {level:<8} | {message} {extra}",  # Custom format
+    sinks=[
+        # Standard stderr sink
+        {
+            'sink': sys.stderr,
+            'level': "INFO",
+            'colorize': True,
+        },
+        # File sink with rotation
+        {
+            'sink': "app.log",
+            'rotation': "10 MB",
+            'retention': "1 week",
+            'level': "DEBUG",
+        },
+        # Custom callable sink
+        alert_sink
+    ]
+)
+
+# The logger is now configured and ready to use
+from pyfecto.runtime import LOGGER
+
+# Regular logging
+LOGGER.info("Application started")
+
+# Logging with context
+user_logger = LOGGER.bind(user_id="12345")
+user_logger.info("User logged in")
+
+# With PYIO for span timing
+from pyfecto.pyio import PYIO
+
+def database_query():
+    # Simulate database operation
+    return {"result": "success"}
+
+effect = PYIO.log_span(
+    name="db-query",
+    log_msg="Database query execution",
+    operation=PYIO.attempt(database_query)
+)
+
+# Run the effect - this will log timing information
+result = effect.run()
+```
+
 ## Real World Example
 
 Here's a more complex example showing how to handle database operations:

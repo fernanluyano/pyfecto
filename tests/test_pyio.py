@@ -1,7 +1,9 @@
+import sys
 from dataclasses import dataclass
 from unittest import TestCase
 
 from src.pyfecto.pyio import PYIO
+from src.pyfecto.runtime import Runtime
 
 
 @dataclass
@@ -15,6 +17,43 @@ class DatabaseError(Exception):
 
 
 class TestPYIO(TestCase):
+    def custom_console_sink(message):
+        """
+        A custom sink function that formats and prints log messages.
+
+        This sink adds colorful formatting and prefixes to make your logs stand out
+        during testing and debugging.
+
+        Args:
+            message: The formatted log message from Loguru
+        """
+        # Add some ANSI color codes for visual distinction
+        GREEN = "\033[92m"
+        BLUE = "\033[94m"
+        YELLOW = "\033[93m"
+        RESET = "\033[0m"
+
+        # Extract the log level if present (assuming standard format)
+        if "INFO" in message:
+            prefix = f"{GREEN}[CUSTOM SINK - INFO]{RESET}"
+        elif "ERROR" in message:
+            prefix = f"{YELLOW}[CUSTOM SINK - ERROR]{RESET}"
+        elif "DEBUG" in message:
+            prefix = f"{BLUE}[CUSTOM SINK - DEBUG]{RESET}"
+        else:
+            prefix = "[CUSTOM SINK]"
+
+        # Print to console with custom formatting
+        print(f"{prefix} 📋 {message}")
+
+        # Optionally add a separator for important messages
+        if "ERROR" in message:
+            print(f"{YELLOW}{'=' * 80}{RESET}")
+
+    runtime = Runtime(sinks=[
+        {"sink": sys.stderr, "level": "INFO"},
+        custom_console_sink
+    ])
 
     def test_dummy(self):
         def get_user(
@@ -52,8 +91,9 @@ class TestPYIO(TestCase):
         print(result)
 
     def test_success(self):
-        effect = PYIO.success(42)
-        self.assertEqual(effect.run(), 42)
+        effect = PYIO.log_info("hi").then(PYIO.success(42))
+        span = PYIO.log_span("mytask", "done task", effect)
+        self.assertEqual(span.run(), 42)
 
     def test_fail(self):
         error = ValueError("test error")
@@ -187,7 +227,9 @@ class TestPYIO(TestCase):
         # Test success path
         success_effect = PYIO.success(42).match_pyio(
             success=lambda x: PYIO.success(f"Success: {x}"),
-            failure=lambda e: PYIO.success(f"Error: {e}"),
+            failure=lambda e: PYIO.success(
+                f"Error: {e}"
+            ),  # Same return type as success branch
         )
         self.assertEqual(success_effect.run(), "Success: 42")
 
@@ -195,9 +237,11 @@ class TestPYIO(TestCase):
         error = ValueError("test error")
         failure_effect = PYIO.fail(error).match_pyio(
             success=lambda x: PYIO.success(f"Success: {x}"),
-            failure=lambda e: PYIO.fail(e),
+            # Use succeed with the same type instead of fail
+            failure=lambda e: PYIO.success(e),  # Return the error as a success value
         )
-        self.assertEqual(failure_effect.run(), error)
+        # Check that we got the error object as a value, not as an error
+        self.assertIs(failure_effect.run(), error)
 
     def test_complex_composition(self):
         @dataclass
@@ -258,13 +302,13 @@ class TestPYIO(TestCase):
         self.assertEqual(flow.run(), "Audit: token secret-token-123 created")
 
     def test_long_flow_with_failure(self):
-        def step1(x: int):
+        def step1(x):
             return PYIO.success(x + 1)
 
-        def step2(x: int):
+        def step2(x):
             return PYIO.attempt(lambda: x / 0)
 
-        def step3(x: int):
+        def step3(x):
             return PYIO.success(f"Final value: {x}")
 
         flow = PYIO.success(0).flat_map(step1).flat_map(step2).flat_map(step3)
