@@ -50,10 +50,9 @@ class TestPYIO(TestCase):
         if "ERROR" in message:
             print(f"{YELLOW}{'=' * 80}{RESET}")
 
-    runtime = Runtime(sinks=[
-        {"sink": sys.stderr, "level": "INFO"},
-        custom_console_sink
-    ])
+    runtime = Runtime(
+        sinks=[{"sink": sys.stderr, "level": "INFO"}, custom_console_sink]
+    )
 
     def test_dummy(self):
         def get_user(
