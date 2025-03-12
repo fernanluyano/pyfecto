@@ -2,11 +2,13 @@ name: Pyfecto CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches:
+      - "main"
+      - "release/**"
     tags:
       - 'v*'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 jobs:
   test:
