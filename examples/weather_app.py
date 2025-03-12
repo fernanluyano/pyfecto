@@ -4,7 +4,7 @@ Example Pyfecto Application: Weather CLI
 This example demonstrates how to create a command-line application using the Pyfecto
 application structure. It simulates fetching weather data for a given city.
 """
-
+import time
 from dataclasses import dataclass
 
 from pyfecto.app import PyfectoApp
@@ -73,12 +73,14 @@ class WeatherService:
         """Simulated API call that might fail"""
         if city not in self._db:
             raise WeatherAPIError(f"Could not find weather data for {city}")
+        # simulate waiting on an api/db call
+        time.sleep(1)
         return self._db[city]
 
 
 # ===== Application =====
 
-class WeatherApp(PyfectoApp[Exception, str]):
+class WeatherApp(PyfectoApp[Exception]):
     """
     Weather application that retrieves and displays weather information.
     """
