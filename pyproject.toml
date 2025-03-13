@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [
     { include = "pyfecto", from = "src" }
 ]
-version = "0.0.0" # dynamically overwritten
+version = "0.2.0"
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -23,29 +23,9 @@ flake8 = "^7.1.2"
 mypy = "^1.15.0"
 
 [build-system]
-requires = [
-    "poetry-core>=2.0.0,<3.0.0",
-    "poetry-dynamic-versioning>=1.0.0,<2.0.0",
-]
-build-backend = "poetry_dynamic_versioning.backend"
-
-[tool.poetry.requires-plugins]
-poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
-
-[tool.poetry-dynamic-versioning]
-enable = true
-vcs = "git"
-style = "pep440"
-format-jinja = """
-{%- if branch == "main" -%}
-{{ env.get("VERSION", "0.0.0") }}
-{%- elif branch.startswith("release/") -%}
-{{ branch.split("/")[1] }}
-{%- else -%}
-0.0.0.dev{{ branch.split("/")[1].split("-")[0] }}
-{%- endif -%}
-"""
