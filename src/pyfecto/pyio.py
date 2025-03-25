@@ -1,3 +1,4 @@
+from __future__ import annotations
 import time
 from dataclasses import dataclass
 from typing import Callable, Generic, Optional, TypeVar
@@ -23,7 +24,7 @@ class PYIO(Generic[E, A]):
     _compute: Callable[[], tuple[E, Optional[A]]]
 
     @staticmethod
-    def success(value: A) -> "PYIO[None, A]":
+    def success(value: A) -> PYIO[None, A]:
         """
         Wraps a value in a successful computation.
         Useful for lifting regular values into the PYIO context when you need to combine them with
@@ -35,7 +36,7 @@ class PYIO(Generic[E, A]):
         return PYIO(lambda: (None, value))
 
     @staticmethod
-    def fail(error: Exception) -> "PYIO[Exception, None]":
+    def fail(error: Exception) -> PYIO[Exception, None]:
         """
         Creates a failed computation with the specified error. Useful for early returns and error cases
         where you want to short-circuit the rest of a computation chain.
@@ -46,7 +47,7 @@ class PYIO(Generic[E, A]):
         return PYIO(lambda: (error, None))
 
     @staticmethod
-    def attempt(f: Callable[[], A]) -> "PYIO[E, A]":
+    def attempt(f: Callable[[], A]) -> PYIO[E, A]:
         """
         Converts a function that might throw into a safe PYIO computation.
 
@@ -66,14 +67,14 @@ class PYIO(Generic[E, A]):
         return PYIO(safe_compute)
 
     @staticmethod
-    def unit() -> "PYIO[None, None]":
+    def unit() -> PYIO[None, None]:
         """
         Creates an empty successful computation. Serves as an identity element when composing PYIO operations.
         Similar to an empty list or zero in other contexts.
         """
         return PYIO.success(None)
 
-    def map(self, f: Callable[[A], B]) -> "PYIO[E, B]":
+    def map(self, f: Callable[[A], B]) -> PYIO[E, B]:
         """
         Transforms the successful result without changing the error handling.
         Like applying a function to each element of a list, this lets you modify successful values while
@@ -91,7 +92,7 @@ class PYIO(Generic[E, A]):
 
         return PYIO(new_compute)
 
-    def map_to(self, f: Callable[[], B]) -> "PYIO[E, B]":
+    def map_to(self, f: Callable[[], B]) -> PYIO[E, B]:
         """
         Similar to 'map', but throws away the input.
 
@@ -100,7 +101,7 @@ class PYIO(Generic[E, A]):
         """
         return self.map(lambda _: f())
 
-    def flat_map(self, f: Callable[[A], "PYIO[E, B]"]) -> "PYIO[E, B]":
+    def flat_map(self, f: Callable[[A], PYIO[E, B]]) -> PYIO[E, B]:
         """
         Chains computations where each step depends on previous results. The core sequencing operation for PYIO - allows
         you to use the result of one computation to determine what to do next.
@@ -117,13 +118,13 @@ class PYIO(Generic[E, A]):
 
         return PYIO(new_compute)
 
-    def then(self, that: "PYIO[E, B]") -> "PYIO[E, B]":
+    def then(self, that: PYIO[E, B]) -> PYIO[E, B]:
         """
         Similar to 'flat_map', but it throws away the input.
         """
         return self.flat_map(lambda _: that)
 
-    def zip(self, that: "PYIO[E, B]") -> "PYIO[E, tuple[A, B]]":
+    def zip(self, that: PYIO[E, B]) -> PYIO[E, tuple[A, B]]:
         """
         Pairs the results of two computations. When you need the results from two independent operations,
         this combines them into a tuple.
@@ -133,7 +134,7 @@ class PYIO(Generic[E, A]):
         """
         return self.flat_map(lambda a: that.map(lambda b: (a, b)))
 
-    def recover(self, handler: Callable[[E], "PYIO[E, A]"]) -> "PYIO[E, A]":
+    def recover(self, handler: Callable[[E], PYIO[E, A]]) -> PYIO[E, A]:
         """
         Recovers from errors using the provided handler. Like a catch block, this lets you intercept errors and try
         alternative approaches.
@@ -152,7 +153,7 @@ class PYIO(Generic[E, A]):
 
     def match(
         self, failure: Callable[[E], B], success: Callable[[A], B]
-    ) -> "PYIO[None, B]":
+    ) -> PYIO[None, B]:
         """
         Consolidates error and success cases into a single value. Provides a way to handle both outcomes uniformly,
         similar to pattern matching on a Result type.
@@ -171,8 +172,8 @@ class PYIO(Generic[E, A]):
         return PYIO(fold_compute)
 
     def match_pyio(
-        self, success: Callable[[A], "PYIO[E, B]"], failure: Callable[[E], "PYIO[E, B]"]
-    ) -> "PYIO[E, B]":
+        self, success: Callable[[A], PYIO[E, B]], failure: Callable[[E], PYIO[E, B]]
+    ) -> PYIO[E, B]:
         """
         Routes to different computations based on success/failure. Like match(), but allows the handlers to start
         new computations rather than just returning values.
@@ -190,7 +191,7 @@ class PYIO(Generic[E, A]):
 
         return PYIO(fold_compute)
 
-    def is_success(self) -> "PYIO[None, bool]":
+    def is_success(self) -> PYIO[None, bool]:
         """
         Checks if the computation succeeded.
         A safe way to test the outcome without actually handling the success value or error.
@@ -202,7 +203,7 @@ class PYIO(Generic[E, A]):
 
         return PYIO(compute)
 
-    def is_failure(self) -> "PYIO[None, bool]":
+    def is_failure(self) -> PYIO[None, bool]:
         """
         Checks if the computation failed.
         A safe way to test the outcome without actually handling the success value or error.
@@ -215,7 +216,7 @@ class PYIO(Generic[E, A]):
         return PYIO(compute)
 
     @staticmethod
-    def chain_all(*effects: "PYIO[E, A]") -> "PYIO[E, A] | PYIO[None, None]":
+    def chain_all(*effects: PYIO[E, A]) -> PYIO[E, A] | PYIO[None, None]:
         """
         Runs multiple computations in sequence.
         Useful for batching independent operations where you don't need intermediate results.
@@ -234,8 +235,8 @@ class PYIO(Generic[E, A]):
 
     @staticmethod
     def pipeline(
-        *effects: Callable[[Optional[A]], "PYIO[E, A]"]
-    ) -> "PYIO[E, A] | PYIO[None, None]":
+        *effects: Callable[[Optional[A]], PYIO[E, A]]
+    ) -> PYIO[E, A] | PYIO[None, None]:
         """
         Creates a pipeline of dependent computations.
         Each function gets the result of the previous computation, allowing for more complex workflows.
@@ -264,7 +265,7 @@ class PYIO(Generic[E, A]):
         return value
 
     @staticmethod
-    def log_trace(message: str, **kwargs) -> "PYIO[None, None]":
+    def log_trace(message: str, **kwargs) -> PYIO[None, None]:
         """
         Log a trace message as an effect.
 
@@ -275,7 +276,7 @@ class PYIO(Generic[E, A]):
         return PYIO.attempt(lambda: LOGGER.trace(message, **kwargs))
 
     @staticmethod
-    def log_debug(message: str, **kwargs) -> "PYIO[None, None]":
+    def log_debug(message: str, **kwargs) -> PYIO[None, None]:
         """
         Log a debug message as an effect.
 
@@ -286,7 +287,7 @@ class PYIO(Generic[E, A]):
         return PYIO.attempt(lambda: LOGGER.debug(message, **kwargs))
 
     @staticmethod
-    def log_info(message: str, **kwargs) -> "PYIO[None, None]":
+    def log_info(message: str, **kwargs) -> PYIO[None, None]:
         """
         Log an info message as an effect.
 
@@ -297,7 +298,7 @@ class PYIO(Generic[E, A]):
         return PYIO.attempt(lambda: LOGGER.info(message, **kwargs))
 
     @staticmethod
-    def log_warning(message: str, **kwargs) -> "PYIO[None, None]":
+    def log_warning(message: str, **kwargs) -> PYIO[None, None]:
         """
         Log a warning message as an effect.
 
@@ -308,7 +309,7 @@ class PYIO(Generic[E, A]):
         return PYIO.attempt(lambda: LOGGER.warning(message, **kwargs))
 
     @staticmethod
-    def log_error(message: str, **kwargs) -> "PYIO[None, None]":
+    def log_error(message: str, **kwargs) -> PYIO[None, None]:
         """
         Log an error message as an effect.
 
@@ -319,7 +320,7 @@ class PYIO(Generic[E, A]):
         return PYIO.attempt(lambda: LOGGER.error(message, **kwargs))
 
     @staticmethod
-    def log_critical(message: str, **kwargs) -> "PYIO[None, None]":
+    def log_critical(message: str, **kwargs) -> PYIO[None, None]:
         """
         Log a critical message as an effect.
 
@@ -330,7 +331,7 @@ class PYIO(Generic[E, A]):
         return PYIO.attempt(lambda: LOGGER.critical(message, **kwargs))
 
     @staticmethod
-    def log_span(name: str, log_msg: str, operation: "PYIO[E, A]") -> "PYIO[E, A]":
+    def log_span(name: str, log_msg: str, operation: PYIO[E, A]) -> PYIO[E, A]:
         """
         Creates a composed effect that logs timing information after the operation completes.
 
