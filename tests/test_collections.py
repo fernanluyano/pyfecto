@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from src.pyfecto.collections import foreach
+from src.pyfecto.collections import foreach, collect_all
 from src.pyfecto.pyio import PYIO
 
 
@@ -81,3 +81,43 @@ class TestCollections(TestCase):
         matrix = [[1, 2], [3, 4], [5, 6]]
         effect = process_matrix(matrix)
         self.assertEqual(effect.run(), [3, 7, 11])
+
+    def test_collect_all_empty_list(self):
+        """Test collect_all with an empty list."""
+        effect = collect_all([])
+        self.assertEqual(effect.run(), [])
+
+    def test_collect_all_success(self):
+        """Test collect_all with successful effects."""
+        effect1 = PYIO.success(1)
+        effect2 = PYIO.success("hello")
+        effect3 = PYIO.attempt(lambda: True)
+
+        combined = collect_all([effect1, effect2, effect3])
+        result = combined.run()
+
+        self.assertEqual(result, [1, "hello", True])
+
+    def test_collect_all_preserves_order(self):
+        """Test that collect_all preserves the order of effects."""
+        effects = [PYIO.success(i) for i in range(5)]
+        result = collect_all(effects).run()
+        self.assertEqual(result, [0, 1, 2, 3, 4])
+
+    def test_collect_all_failure(self):
+        """Test collect_all with a failing effect."""
+        effect1 = PYIO.success(1)
+        effect2 = PYIO.fail(ValueError("test error"))
+        effect3 = PYIO.success(3)
+
+        combined = collect_all([effect1, effect2, effect3])
+        result = combined.run()
+
+        self.assertIsInstance(result, ValueError)
+        self.assertEqual(str(result), "test error")
+
+    def test_collect_all_single_effect(self):
+        """Test collect_all with a single effect."""
+        effect = PYIO.success(42)
+        result = collect_all([effect]).run()
+        self.assertEqual(result, [42])
