@@ -5,7 +5,7 @@ This module provides functions for working with collections of PYIO effects or
 applying effects to collections of values, similar to ZIO's collection utilities.
 """
 
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Any
 
 from .pyio import PYIO
 
@@ -52,3 +52,18 @@ def foreach(items: list[A], f: Callable[[A], PYIO[E, B]]) -> PYIO[E, list[B]]:
         return None, results
 
     return PYIO(process_all)
+
+
+def collectAll(effects: list[PYIO[Any, Any]]) -> PYIO[E, list[Any]]:
+    results: list[Any] = []
+
+    for e in effects:
+        try:
+            result = e.run()
+            if isinstance(result, Exception):
+                return PYIO.fail(result)
+            results.append(result)
+        except Exception as e:
+            return PYIO.fail(e)
+
+    return PYIO.success(results)

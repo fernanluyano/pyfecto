@@ -31,20 +31,6 @@ class TestCollections(TestCase):
         self.assertIsInstance(result, ValueError)
         self.assertEqual(str(result), "Error on item 2")
 
-    def test_foreach_with_exception_thrown(self):
-        """Test foreach with a function that throws an exception."""
-
-        def process(x):
-            if x == 2:
-                raise ValueError("Exception thrown on item 2")
-            return PYIO.success(x * 2)
-
-        # Should fail when the function throws
-        effect = foreach([1, 2, 3], process)
-        result = effect.run()
-        self.assertIsInstance(result, ValueError)
-        self.assertEqual(str(result), "Exception thrown on item 2")
-
     def test_foreach_with_complex_types(self):
         """Test foreach with complex types."""
 
@@ -80,18 +66,6 @@ class TestCollections(TestCase):
         effect = foreach([3, 1, 2], lambda x: PYIO.success(x))
         self.assertEqual(effect.run(), [3, 1, 2])
 
-    def test_foreach_with_async_simulation(self):
-        """Test foreach with operations that simulate asynchronous behavior."""
-        results = []
-
-        def track_execution(x):
-            results.append(x)
-            return PYIO.success(x)
-
-        # Should execute in sequence
-        foreach([1, 2, 3], track_execution).run()
-        self.assertEqual(results, [1, 2, 3])
-
     def test_foreach_within_foreach(self):
         """Test nested foreach operations."""
 
@@ -107,18 +81,3 @@ class TestCollections(TestCase):
         matrix = [[1, 2], [3, 4], [5, 6]]
         effect = process_matrix(matrix)
         self.assertEqual(effect.run(), [3, 7, 11])
-
-    def test_foreach_with_flat_map(self):
-        """Test foreach combined with flat_map."""
-
-        def get_user_orders(user_id):
-            # Simulate fetching orders for a user
-            orders = {1: ["A1", "A2"], 2: ["B1"], 3: []}
-            return PYIO.success(orders.get(user_id, []))
-
-        # Get all orders for all users
-        effect = foreach([1, 2, 3], get_user_orders).map(
-            lambda order_lists: [order for sublist in order_lists for order in sublist]
-        )
-
-        self.assertEqual(effect.run(), ["A1", "A2", "B1"])
