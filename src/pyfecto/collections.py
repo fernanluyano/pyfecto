@@ -5,7 +5,7 @@ This module provides functions for working with collections of PYIO effects or
 applying effects to collections of values, similar to ZIO's collection utilities.
 """
 
-from typing import Callable, TypeVar, Any
+from typing import Any, Callable, TypeVar
 
 from .pyio import PYIO
 
@@ -137,7 +137,3 @@ def filter_(items: list[A], f: Callable[[A], PYIO[E, bool]]) -> PYIO[E, list[A]]
         return None, results
 
     return PYIO(process_all)
-
-
-
-

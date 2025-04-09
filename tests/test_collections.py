@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from src.pyfecto.collections import *
+from src.pyfecto.collections import collect_all, filter_, foreach
 from src.pyfecto.pyio import PYIO
 
 
