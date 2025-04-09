@@ -96,3 +96,48 @@ def collect_all(effects: list[PYIO[E, Any]]) -> PYIO[E, list[Any]]:
         return None, results
 
     return PYIO(process_all)
+
+
+def filter_(items: list[A], f: Callable[[A], PYIO[E, bool]]) -> PYIO[E, list[A]]:
+    """
+    Filters items in a list based on a predicate function that returns a PYIO effect.
+
+    This function applies the predicate function to each item in the list and keeps only
+    the items for which the predicate returns true. If any effect fails during evaluation,
+    the entire operation fails with that error.
+
+    Args:
+        items: A list of items to filter
+        f: A function that takes an item and returns a PYIO effect containing a boolean
+
+    Returns:
+        A PYIO effect that produces a list of the items that passed the filter if successful
+
+    Example:
+        # Get only active users from a list of user IDs
+        user_ids = [1, 2, 3, 4, 5]
+        active_users_effect = filter_(user_ids, lambda id: is_user_active(id))
+        # active_users_effect will contain only the IDs of active users if successful
+        # or fail with the first error encountered
+    """
+    results: list[A] = []
+    if not items:
+        return PYIO.attempt(lambda: results)
+
+    def process_all():
+        for item in items:
+            try:
+                result = f(item).run()
+                if isinstance(result, Exception):
+                    return result, None
+                if result:
+                    results.append(item)
+            except Exception as e:
+                return e, None
+        return None, results
+
+    return PYIO(process_all)
+
+
+
+

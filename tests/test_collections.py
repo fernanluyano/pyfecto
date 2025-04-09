@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from src.pyfecto.collections import foreach, collect_all
+from src.pyfecto.collections import *
 from src.pyfecto.pyio import PYIO
 
 
@@ -121,3 +121,38 @@ class TestCollections(TestCase):
         effect = PYIO.success(42)
         result = collect_all([effect]).run()
         self.assertEqual(result, [42])
+
+    def test_filter_empty_list(self):
+        """Test filter_ with an empty list."""
+        effect = filter_([], lambda x: PYIO.success(x % 2 == 0))
+        self.assertEqual(effect.run(), [])
+
+    def test_filter_success(self):
+        """Test filter_ with a successful predicate."""
+        # Keep only even numbers
+        effect = filter_([1, 2, 3, 4, 5], lambda x: PYIO.success(x % 2 == 0))
+        self.assertEqual(effect.run(), [2, 4])
+
+    def test_filter_all_pass(self):
+        """Test filter_ when all items pass the filter."""
+        effect = filter_([2, 4, 6, 8], lambda x: PYIO.success(x % 2 == 0))
+        self.assertEqual(effect.run(), [2, 4, 6, 8])
+
+    def test_filter_none_pass(self):
+        """Test filter_ when no items pass the filter."""
+        effect = filter_([1, 3, 5, 7], lambda x: PYIO.success(x % 2 == 0))
+        self.assertEqual(effect.run(), [])
+
+    def test_filter_failure(self):
+        """Test filter_ with a predicate that fails for some input."""
+
+        def check_even(x):
+            if x == 3:
+                return PYIO.fail(ValueError("Error on item 3"))
+            return PYIO.success(x % 2 == 0)
+
+        # Should fail on the item with value 3
+        effect = filter_([1, 2, 3, 4, 5], check_even)
+        result = effect.run()
+        self.assertIsInstance(result, ValueError)
+        self.assertEqual(str(result), "Error on item 3")
