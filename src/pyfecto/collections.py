@@ -112,13 +112,6 @@ def filter_(items: list[A], f: Callable[[A], PYIO[E, bool]]) -> PYIO[E, list[A]]
 
     Returns:
         A PYIO effect that produces a list of the items that passed the filter if successful
-
-    Example:
-        # Get only active users from a list of user IDs
-        user_ids = [1, 2, 3, 4, 5]
-        active_users_effect = filter_(user_ids, lambda id: is_user_active(id))
-        # active_users_effect will contain only the IDs of active users if successful
-        # or fail with the first error encountered
     """
     results: list[A] = []
     if not items:
@@ -135,5 +128,45 @@ def filter_(items: list[A], f: Callable[[A], PYIO[E, bool]]) -> PYIO[E, list[A]]
             except Exception as e:
                 return e, None
         return None, results
+
+    return PYIO(process_all)
+
+
+def partition(
+    items: list[A], f: Callable[[A], PYIO[E, B]]
+) -> PYIO[None, tuple[list[Exception], list[B]]]:
+    """
+    Partitions a list of items into successes and failures based on processing with a function.
+
+    Unlike other collection functions that fail on the first error, partition collects all
+    results - both successful outcomes and errors - and groups them into separate lists.
+    This is useful when you want to process a batch of items and handle failures later
+    rather than stopping at the first error.
+
+    Args:
+        items: A list of items to process
+        f: A function that maps each item to a PYIO effect
+
+    Returns:
+        A PYIO effect that produces a tuple of (failures_list, successes_list)
+        where failures_list contains all exceptions encountered and successes_list
+        contains all successful results.
+    """
+    failures: list[Exception] = []
+    successes: list[B] = []
+    if not items:
+        return PYIO.attempt(lambda: (failures, successes))
+
+    def process_all():
+        for item in items:
+            try:
+                result = f(item).run()
+                if isinstance(result, Exception):
+                    failures.append(result)
+                else:
+                    successes.append(result)
+            except Exception as e:
+                failures.append(e)
+        return None, (failures, successes)
 
     return PYIO(process_all)

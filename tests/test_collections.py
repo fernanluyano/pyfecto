@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from src.pyfecto.collections import collect_all, filter_, foreach
+from src.pyfecto.collections import collect_all, filter_, foreach, partition
 from src.pyfecto.pyio import PYIO
 
 
@@ -156,3 +156,107 @@ class TestCollections(TestCase):
         result = effect.run()
         self.assertIsInstance(result, ValueError)
         self.assertEqual(str(result), "Error on item 3")
+
+    def test_partition_empty_list(self):
+        """Test partition with an empty list."""
+        # Should return empty lists for both failures and successes
+        effect = partition([], lambda x: PYIO.success(x * 2))
+        failures, successes = effect.run()
+
+        self.assertEqual(failures, [])
+        self.assertEqual(successes, [])
+
+    def test_partition_all_success(self):
+        """Test partition when all items succeed."""
+        # Double each number, all should succeed
+        effect = partition([1, 2, 3], lambda x: PYIO.success(x * 2))
+        failures, successes = effect.run()
+
+        self.assertEqual(failures, [])
+        self.assertEqual(successes, [2, 4, 6])
+
+    def test_partition_all_failures(self):
+        """Test partition when all items fail."""
+
+        # All operations fail
+        def error_fn(x):
+            return PYIO.fail(ValueError(f"Error with {x}"))
+
+        effect = partition([1, 2, 3], error_fn)
+        failures, successes = effect.run()
+
+        self.assertEqual(len(failures), 3)
+        self.assertEqual(len(successes), 0)
+
+        # Verify error messages
+        self.assertEqual(str(failures[0]), "Error with 1")
+        self.assertEqual(str(failures[1]), "Error with 2")
+        self.assertEqual(str(failures[2]), "Error with 3")
+
+    def test_partition_mixed_results(self):
+        """Test partition with a mix of successes and failures."""
+
+        def process(x):
+            if x % 2 == 0:
+                return PYIO.success(x * 10)
+            else:
+                return PYIO.fail(ValueError(f"Odd number: {x}"))
+
+        effect = partition([1, 2, 3, 4, 5], process)
+        failures, successes = effect.run()
+
+        # Should have 3 failures (for odd numbers) and 2 successes (for even numbers)
+        self.assertEqual(len(failures), 3)
+        self.assertEqual(len(successes), 2)
+
+        # Check success values
+        self.assertEqual(successes, [20, 40])
+
+        # Check error messages
+        self.assertEqual(str(failures[0]), "Odd number: 1")
+        self.assertEqual(str(failures[1]), "Odd number: 3")
+        self.assertEqual(str(failures[2]), "Odd number: 5")
+
+    def test_partition_operation_throwing_exception(self):
+        """Test partition with operations that throw exceptions rather than returning PYIO failures."""
+
+        def buggy_process(x):
+            if x == 3:
+                # This will be caught by the try/except in partition
+                raise RuntimeError("Unexpected error")
+            return PYIO.success(x)
+
+        effect = partition([1, 2, 3, 4], buggy_process)
+        failures, successes = effect.run()
+
+        # Should have 1 failure and 3 successes
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(len(successes), 3)
+
+        # Check success values
+        self.assertEqual(successes, [1, 2, 4])
+
+        # Check error
+        self.assertIsInstance(failures[0], RuntimeError)
+        self.assertEqual(str(failures[0]), "Unexpected error")
+
+    def test_partition_preserves_order(self):
+        """Test that partition preserves the order in both success and failure lists."""
+
+        def process(x):
+            if x in [2, 4, 6]:
+                return PYIO.fail(ValueError(f"Error: {x}"))
+            return PYIO.success(x)
+
+        items = [1, 2, 3, 4, 5, 6, 7]
+        effect = partition(items, process)
+        failures, successes = effect.run()
+
+        # Check order preservation
+        self.assertEqual(successes, [1, 3, 5, 7])
+
+        # Check errors are in the right order
+        self.assertEqual(len(failures), 3)
+        self.assertEqual(str(failures[0]), "Error: 2")
+        self.assertEqual(str(failures[1]), "Error: 4")
+        self.assertEqual(str(failures[2]), "Error: 6")
