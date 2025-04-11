@@ -2,7 +2,8 @@
 
 from unittest import TestCase
 
-from src.pyfecto.collections import collect_all, filter_, foreach, partition
+from src.pyfecto.collections import (collect_all, filter_, forall, foreach,
+                                     partition)
 from src.pyfecto.pyio import PYIO
 
 
@@ -260,3 +261,68 @@ class TestCollections(TestCase):
         self.assertEqual(str(failures[0]), "Error: 2")
         self.assertEqual(str(failures[1]), "Error: 4")
         self.assertEqual(str(failures[2]), "Error: 6")
+
+    def test_forall_empty_list(self):
+        """Test forall with an empty list should return True."""
+        effect = forall([], lambda x: PYIO.success(x % 2 == 0))
+        self.assertEqual(effect.run(), True)
+
+    def test_forall_none_input(self):
+        """Test forall with None input should return True."""
+        effect = forall(None, lambda x: PYIO.success(x % 2 == 0))
+        self.assertEqual(effect.run(), True)
+
+    def test_forall_all_true(self):
+        """Test forall when all items pass the predicate."""
+        effect = forall([2, 4, 6, 8], lambda x: PYIO.success(x % 2 == 0))
+        self.assertEqual(effect.run(), True)
+
+    def test_forall_one_false(self):
+        """Test forall when one item fails the predicate."""
+        effect = forall([2, 4, 5, 8], lambda x: PYIO.success(x % 2 == 0))
+        self.assertEqual(effect.run(), False)
+
+    def test_forall_all_false(self):
+        """Test forall when all items fail the predicate."""
+        effect = forall([1, 3, 5, 7], lambda x: PYIO.success(x % 2 == 0))
+        self.assertEqual(effect.run(), False)
+
+    def test_forall_short_circuit(self):
+        """Test forall short-circuits when it finds a failing predicate."""
+        counter = 0
+
+        def count_and_check(x):
+            nonlocal counter
+            counter += 1
+            return PYIO.success(x % 2 == 0)
+
+        # The 3rd item (5) fails the predicate, so we should only process 3 items
+        effect = forall([2, 4, 5, 8, 10], count_and_check)
+        self.assertEqual(effect.run(), False)
+        self.assertEqual(counter, 3)  # Only processed items until failure
+
+    def test_forall_error_in_predicate(self):
+        """Test forall when the predicate function raises an error."""
+
+        def buggy_predicate(x):
+            if x == 3:
+                return PYIO.fail(ValueError("Error processing item 3"))
+            return PYIO.success(x % 2 == 0)
+
+        effect = forall([2, 4, 3, 6], buggy_predicate)
+        result = effect.run()
+        self.assertIsInstance(result, ValueError)
+        self.assertEqual(str(result), "Error processing item 3")
+
+    def test_forall_exception_in_predicate(self):
+        """Test forall when the predicate function throws an exception."""
+
+        def throwing_predicate(x):
+            if x == 3:
+                raise RuntimeError("Unexpected runtime error")
+            return PYIO.success(x % 2 == 0)
+
+        effect = forall([2, 4, 3, 6], throwing_predicate)
+        result = effect.run()
+        self.assertIsInstance(result, RuntimeError)
+        self.assertEqual(str(result), "Unexpected runtime error")

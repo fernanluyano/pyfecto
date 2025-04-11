@@ -14,6 +14,52 @@ B = TypeVar("B")
 E = TypeVar("E", bound=Exception | None)
 
 
+def forall(items: list[A], f: Callable[[A], PYIO[E, bool]]) -> PYIO[E, bool]:
+    """
+    Checks if all items in a list satisfy a predicate function.
+
+    This function evaluates whether every item in the list satisfies the provided predicate.
+    It implements short-circuit evaluation, stopping immediately when it encounters an item
+    that fails the predicate. If the input list is empty or None, it returns True (vacuous truth).
+
+    Args:
+        items: A list of items to check, or None
+        f: A function that takes an item and returns a PYIO effect containing a boolean
+
+    Returns:
+        A PYIO effect that produces:
+        - True if all items satisfy the predicate
+        - False if any item fails the predicate
+        - The first encountered error if any predicate evaluation fails
+
+    Example:
+        # Check if all users are valid
+        users = get_users()
+        all_valid = forall(users, is_valid_user)
+
+        # Check if all numbers are even
+        numbers = [2, 4, 6, 8]
+        all_even = forall(numbers, lambda x: PYIO.success(x % 2 == 0))
+    """
+    if items is None:
+        return PYIO.attempt(lambda: True)
+
+    def process_all():
+        for item in items:
+            try:
+                result = f(item).run()
+                if isinstance(result, Exception):
+                    return result, None
+                # interrupt the loop early, since the current predicate didn't pass
+                elif not result:
+                    return None, False
+            except Exception as e:
+                return e, None
+        return None, True
+
+    return PYIO(process_all)
+
+
 def foreach(items: list[A], f: Callable[[A], PYIO[E, B]]) -> PYIO[E, list[B]]:
     """
     Applies the function f to each element in the list and collects the results.
