@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import time
 from dataclasses import dataclass
 from typing import Callable, Generic, Optional, TypeVar
@@ -253,7 +254,7 @@ class PYIO(Generic[E, A]):
 
         return result
 
-    def run(self) -> Optional[E] | A:
+    def run(self) -> E | Optional[A]:
         """
         Executes the computation and returns the final outcome.
         This is where the actual work happens - everything else just builds up the recipe for what to do.
