@@ -31,15 +31,6 @@ def forall(items: list[A], f: Callable[[A], PYIO[E, bool]]) -> PYIO[E, bool]:
         - True if all items satisfy the predicate
         - False if any item fails the predicate
         - The first encountered error if any predicate evaluation fails
-
-    Example:
-        # Check if all users are valid
-        users = get_users()
-        all_valid = forall(users, is_valid_user)
-
-        # Check if all numbers are even
-        numbers = [2, 4, 6, 8]
-        all_even = forall(numbers, lambda x: PYIO.success(x % 2 == 0))
     """
     if items is None:
         return PYIO.attempt(lambda: True)
@@ -71,13 +62,6 @@ def foreach(items: list[A], f: Callable[[A], PYIO[E, B]]) -> PYIO[E, list[B]]:
 
     Returns:
         A PYIO effect that produces a list of all results if successful
-
-    Example:
-        # Convert a list of IDs to User objects from database
-        user_ids = [1, 2, 3]
-        users_effect = foreach(user_ids, get_user_by_id)
-        # users_effect will contain a list of User objects if all succeed
-        # or fail with the first error encountered
     """
 
     results: list[B] = []
@@ -115,15 +99,6 @@ def collect_all(effects: list[PYIO[E, Any]]) -> PYIO[E, list[Any]]:
     Returns:
         A PYIO effect that will produce a list of all results if all effects succeed,
         or fail with the first encountered error.
-
-    Example:
-        # Collect results from multiple heterogeneous operations
-        user_effect = get_user(user_id)                # Returns User
-        posts_count_effect = count_posts(user_id)      # Returns int
-        is_active_effect = check_if_active(user_id)    # Returns bool
-
-        all_data = collect_all([user_effect, posts_count_effect, is_active_effect])
-        # all_data will produce [user, count, is_active] when run
     """
     results: list[Any] = []
     if not effects:
